@@ -1,0 +1,9 @@
+damage: 8 #deals 5 hearts of damage
+friendly: false # if it's set on false it will only attack players, on true only mobs
+
+# attributes
+rangeCheckAttack: 600.1
+speedModifier: 1.25
+attackIntervalMin: 15
+attackIntervalMax: 15
+attackRadius: 10.1

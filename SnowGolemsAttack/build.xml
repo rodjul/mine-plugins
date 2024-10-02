@@ -1,0 +1,8 @@
+<?xml version="1.0" ?>
+<!DOCTYPE xml>
+<project name="SnowmenAttack" default="Build">
+    <target name="Build">
+        <jar jarfile="C:/Users/rodri/Documentos/minecraft/plugins/${ant.project.name}.jar" basedir="./target/classes/" includes="**/*">
+        </jar>
+    </target>
+</project>
