@@ -55,6 +55,7 @@ public class RevivePeople implements Listener, CommandExecutor {
                     boolean result = this.cmdRevive.run(sender, player, label, args);
                     if(result){
                         playerLocationDeaths.remove(player.getUniqueId());
+                        player.sendMessage(ChatColor.GREEN + "\uD83D\uDD4A REVIVIDO! \uD83D\uDD4A");
                     }
                     return result;
                 } catch (Exception e) {
