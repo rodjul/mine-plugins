@@ -23,26 +23,26 @@ import java.util.UUID;
 
 public class RevivePeople implements Listener, CommandExecutor {
 
-    private HashMap<UUID, Location> playerLocationDeaths = new HashMap<>();
+    private static HashMap<UUID, Location> playerLocationDeaths = new HashMap<>();
     private MainPlugin plugin;
     private CommandRevive cmdRevive;
 
     private Utils utils = new Utils();
 
     public RevivePeople(MainPlugin plugin) {
-        this.playerLocationDeaths = new HashMap<>();
+        playerLocationDeaths = new HashMap<>();
         this.plugin = plugin;
         this.cmdRevive = new CommandRevive();
     }
 
     public void disable(){
         // desabilitando o Invulnerable se existir
-        for (UUID key : this.playerLocationDeaths.keySet()) {
+        for (UUID key : playerLocationDeaths.keySet()) {
             Player player = Bukkit.getPlayer(key);
             if(player == null) continue;
             player.setInvulnerable(false);;
         }
-        this.playerLocationDeaths.clear();
+        playerLocationDeaths.clear();
     }
 
     @Override
@@ -54,7 +54,7 @@ public class RevivePeople implements Listener, CommandExecutor {
                     Player player = this.utils.findPlayer(this.utils.getFirstArgument(args));
                     boolean result = this.cmdRevive.run(sender, player, label, args);
                     if(result){
-                        this.playerLocationDeaths.remove(player.getUniqueId());
+                        playerLocationDeaths.remove(player.getUniqueId());
                     }
                     return result;
                 } catch (Exception e) {
@@ -83,7 +83,7 @@ public class RevivePeople implements Listener, CommandExecutor {
     public void onPlayerGameModeChangeEvent(PlayerGameModeChangeEvent event) {
         Player player = event.getPlayer();
         if(event.getPlayer().isOp()) {
-            this.playerLocationDeaths.remove(player.getUniqueId());
+            playerLocationDeaths.remove(player.getUniqueId());
             player.setInvulnerable(false);
             player.setHealth(20);
         };
@@ -92,7 +92,7 @@ public class RevivePeople implements Listener, CommandExecutor {
     @EventHandler
     public void onPlayerRightClickPlayer(PlayerInteractEntityEvent e) {
         // redundante mas valida se é ele mesmo
-        if(this.playerLocationDeaths.containsKey(e.getPlayer().getUniqueId())) {
+        if(playerLocationDeaths.containsKey(e.getPlayer().getUniqueId())) {
             return;
         }
 //        System.out.println("PlayerInteractEntityEvent aaa : " + e.getPlayer().getName());
@@ -120,12 +120,12 @@ public class RevivePeople implements Listener, CommandExecutor {
             if(p.hasMetadata("forceKill") && p.getMetadata("forceKill").get(0).asBoolean()){
                 System.out.println("player executed cmd respawn");
                 p.removeMetadata("forceKill", this.plugin);
-                this.playerLocationDeaths.remove(p.getUniqueId());
+                playerLocationDeaths.remove(p.getUniqueId());
                 p.setInvulnerable(false);
                 return;
             }
 
-            if(this.playerLocationDeaths.containsKey(p.getUniqueId())){
+            if(playerLocationDeaths.containsKey(p.getUniqueId())){
                 ev.setCancelled(true);
                 return;
             }
@@ -158,33 +158,40 @@ public class RevivePeople implements Listener, CommandExecutor {
                     playerLocation.getZ()
                 ));
 
-                this.playerLocationDeaths.put(p.getUniqueId(), playerLocation);
+                playerLocationDeaths.put(p.getUniqueId(), playerLocation);
 
                 ev.setCancelled(true);
                 p.setHealth(0.1);
                 p.setInvulnerable(true);
 
-                this.runTimeout(p);
+                this.runTaskCheckTimeoutWaitPlayer(p);
             }
         }
     }
 
-    private final static int secondsWaitTime = 300;
-    private void runTimeout(Player player){
+    private final static int secondsWaitTime = MainPlugin.instance.getConfig().getInt("waitSecondsAfterDeath", 300);
+    private void runTaskCheckTimeoutWaitPlayer(Player player){
         int ticks = 20; // 20 ticks é 1 segundo pro servidor
         int secondsToWaitToRun = 1;
         int period = secondsToWaitToRun * ticks;
         int delay = 0;
 
-        sendPrivateMessageToPlayerAboutRespawnOrTimeout(player, secondsWaitTime);
+        sendPrivateMessageToPlayerAboutRespawnOrTimeout(player, secondsWaitTime / 60, secondsWaitTime);
 
         new BukkitRunnable(){
             private int seconds = secondsWaitTime;
+            private int minutes = secondsWaitTime / 60;
             private int waitSecondsToSendMessage = 60;
             public void run(){
                 this.seconds--;
                 this.waitSecondsToSendMessage--;
 
+                if(!playerLocationDeaths.containsKey(player.getUniqueId())){
+//                    System.out.println(player.getName() + " foi revivido, parando o runtask");
+                    this.cancel();
+                    return;
+                }
+                
                 if(this.seconds <= 0){
                     String message = ChatColor.RED + "Tempo limite atingido, executando "+ ChatColor.WHITE + "/respawn";
                     player.sendMessage(message);
@@ -194,15 +201,15 @@ public class RevivePeople implements Listener, CommandExecutor {
                 }
 
                 if(this.waitSecondsToSendMessage <= 0){
-                    sendPrivateMessageToPlayerAboutRespawnOrTimeout(player, this.seconds);
+                    sendPrivateMessageToPlayerAboutRespawnOrTimeout(player, this.minutes, this.seconds);
                     this.waitSecondsToSendMessage = 60; // reseta o count
                 }
             }
         }.runTaskTimer(this.plugin, delay, period);
     }
 
-    private static void sendPrivateMessageToPlayerAboutRespawnOrTimeout(Player player, int seconds){
-        String message = String.format(ChatColor.RED + "Você morreu! Se em 5 minutos alguém não te reviver, você perderá os items! Restando %d segundos", seconds);
+    private static void sendPrivateMessageToPlayerAboutRespawnOrTimeout(Player player, int minutes, int seconds){
+        String message = String.format(ChatColor.RED + "Você morreu! Se em %d minutos alguém não te reviver, você perderá os items! Restando %d segundos", minutes, seconds);
         player.sendMessage(message);
         message = ChatColor.RED + "Para pular a espera, faça "+ ChatColor.WHITE + "/respawn" + ChatColor.RED + " mas você perderá os items!";
         player.sendMessage(message);
@@ -215,14 +222,14 @@ public class RevivePeople implements Listener, CommandExecutor {
 
     @EventHandler
     public void onPlayerPickupArmour(PlayerPickupItemEvent e) {
-        if(this.playerLocationDeaths.containsKey(e.getPlayer().getUniqueId())) {
+        if(playerLocationDeaths.containsKey(e.getPlayer().getUniqueId())) {
             e.setCancelled(true);
         }
     }
 
     @EventHandler
     public void onPlayerItemConsumeEvent(PlayerItemConsumeEvent e) {
-        if(this.playerLocationDeaths.containsKey(e.getPlayer().getUniqueId())) {
+        if(playerLocationDeaths.containsKey(e.getPlayer().getUniqueId())) {
             e.setCancelled(true);
         }
     }
@@ -235,14 +242,14 @@ public class RevivePeople implements Listener, CommandExecutor {
 
     @EventHandler
     public void onPlayerDropItemEvent(PlayerDropItemEvent e) {
-        if(this.playerLocationDeaths.containsKey(e.getPlayer().getUniqueId())) {
+        if(playerLocationDeaths.containsKey(e.getPlayer().getUniqueId())) {
             e.setCancelled(true);
         }
     }
 
 //    @EventHandler
 //    public void onEntityDamageByEntityEvent(EntityDamageByEntityEvent e) {
-//        if(this.playerLocationDeaths.containsKey(e.getPlayer().getUniqueId())) {
+//        if(playerLocationDeaths.containsKey(e.getPlayer().getUniqueId())) {
 //            e.setCancelled(true);
 //        }
 //    }
@@ -250,9 +257,9 @@ public class RevivePeople implements Listener, CommandExecutor {
     @EventHandler
     public void onPlayerMoveEvent(PlayerMoveEvent e) {
 //        System.out.println("PlayerMoveEvent aaa : " + e.getPlayer().getName());
-        if(this.playerLocationDeaths.containsKey(e.getPlayer().getUniqueId())){
-//            System.out.println(this.playerLocationDeaths.toString());
-            e.getPlayer().teleport(this.playerLocationDeaths.get(e.getPlayer().getUniqueId()));
+        if(playerLocationDeaths.containsKey(e.getPlayer().getUniqueId())){
+//            System.out.println(playerLocationDeaths.toString());
+            e.getPlayer().teleport(playerLocationDeaths.get(e.getPlayer().getUniqueId()));
         }
     }
 

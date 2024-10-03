@@ -4,6 +4,8 @@ import me.bot.commands.CommandKit;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.Set;
+
 public final class MainPlugin extends JavaPlugin implements Listener {
     public static MainPlugin instance;
 
@@ -13,6 +15,8 @@ public final class MainPlugin extends JavaPlugin implements Listener {
     public void onEnable() {
         instance=this;
         saveDefaultConfig();
+
+        this.updateConfig();
 
         this.revivePeopleListener = new RevivePeople(instance);
 
@@ -30,4 +34,37 @@ public final class MainPlugin extends JavaPlugin implements Listener {
         this.revivePeopleListener.disable();
 //        this.mobListeners.onDisablePlugin();
     }
+
+    private void updateConfig() {
+        saveDefaultConfig();
+        Set<String> options = getConfig().getDefaults().getKeys(false);
+//        System.out.println("options: " + options);
+        Set<String> current = getConfig().getKeys(false);
+//        System.out.println("current: " + current);
+        boolean changed = false;
+
+        // Ensure all basic sections of the default config are present
+        for (String s : options) {
+            if (!current.contains(s)) {
+                getConfig().set(s, getConfig().getDefaults().get(s));
+                changed = true;
+            }
+        }
+
+        // Delete all sections in the config which are not present in the default
+        for (String s : current) {
+            if (!options.contains(s)) {
+                getConfig().set(s, null);
+                changed = true;
+            }
+        }
+
+        getConfig().options().copyHeader(true);
+//        System.out.println("ALTEDO? " + changed);
+        if (changed) {
+            saveConfig();
+        }
+    }
+
+
 }
