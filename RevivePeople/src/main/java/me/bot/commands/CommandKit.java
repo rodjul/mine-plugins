@@ -1,4 +1,4 @@
-package me.bot;
+package me.bot.commands;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -56,7 +56,8 @@ public class CommandKit implements CommandExecutor {
             // Set the amount of the ItemStack
             bricks.setAmount(20);
             // Give the player our items (comma-seperated list of all ItemStack)
-            playerToSend.getInventory().addItem(bricks, diamond);
+//            playerToSend.getInventory().addItem(bricks, diamond);
+            playerToSend.getInventory().addItem(bricks);
 
             sender.sendMessage(String.format("[KitCommand INFO] sent %s player kit", playerName));
 

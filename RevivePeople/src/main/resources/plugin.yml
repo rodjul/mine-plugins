@@ -16,3 +16,8 @@ commands:
     description: Your description
     usage: /revive nickname
     permission: yourplugin.yourcommandpermission
+
+  respawn:
+    description: Your description
+    usage: /respawn
+    permission: minecraft.command.me
